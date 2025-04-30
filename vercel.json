@@ -1,11 +1,5 @@
 {
   "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ]
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "framework": "nextjs"
 } 
