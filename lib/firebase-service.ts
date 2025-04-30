@@ -163,22 +163,33 @@ export async function deleteClient(id: string) {
 // Tasks
 export async function getTasks(constraints: QueryConstraint[] = []) {
   try {
+    console.log("Fetching tasks with constraints:", constraints);
     const tasksRef = collection(db, 'tasks');
     const defaultConstraints = [orderBy('createdAt', 'desc')];
     const q = query(tasksRef, ...constraints, ...defaultConstraints);
+    console.log("Executing Firestore query...");
     const querySnapshot = await getDocs(q);
+    console.log("Query completed. Number of tasks:", querySnapshot.size);
     
     const tasks: Task[] = [];
     querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log("Task data:", { id: doc.id, ...data });
       tasks.push({
         id: doc.id,
-        ...doc.data()
+        ...data
       } as Task);
     });
     
+    console.log("Successfully processed", tasks.length, "tasks");
     return tasks;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting tasks:', error);
+    console.error('Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
+    });
     return [];
   }
 }

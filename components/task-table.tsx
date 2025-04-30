@@ -38,8 +38,11 @@ export function TaskTable({ filter }: TaskTableProps) {
 
   useEffect(() => {
     let isMounted = true;
+    console.log("TaskTable: Component mounted");
+    
     const loadingTimeout = setTimeout(() => {
       if (loading && isMounted) {
+        console.log("TaskTable: Loading timeout reached");
         setLoading(false);
         toast({
           title: "Loading timeout",
@@ -51,15 +54,25 @@ export function TaskTable({ filter }: TaskTableProps) {
 
     async function loadData() {
       try {
+        console.log("TaskTable: Starting data load");
         setLoading(true);
         // Load clients first, then tasks to avoid rendering issues
+        console.log("TaskTable: Loading clients...");
         const clientsData = await getClients();
+        console.log("TaskTable: Clients loaded:", clientsData.length);
         if (isMounted) setClients(clientsData);
         
+        console.log("TaskTable: Loading tasks...");
         const tasksData = await getTasks();
+        console.log("TaskTable: Tasks loaded:", tasksData.length);
         if (isMounted) setTasks(tasksData);
-      } catch (error) {
-        console.error("Error loading data:", error);
+      } catch (error: any) {
+        console.error("TaskTable: Error loading data:", error);
+        console.error("TaskTable: Error details:", {
+          name: error?.name,
+          message: error?.message,
+          stack: error?.stack
+        });
         if (isMounted) {
           toast({
             title: "Error",
@@ -68,13 +81,17 @@ export function TaskTable({ filter }: TaskTableProps) {
           });
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          console.log("TaskTable: Data load completed");
+          setLoading(false);
+        }
       }
     }
     
     loadData();
     
     return () => {
+      console.log("TaskTable: Component unmounting");
       isMounted = false;
       clearTimeout(loadingTimeout);
     };
