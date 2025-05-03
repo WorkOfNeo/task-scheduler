@@ -138,7 +138,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     try {
       setLoading(true)
-      const fetchedTasks = await getTasks()
+      const fetchedTasks = await getTasks(user.uid)
       setTasks(fetchedTasks)
       setError(null)
     } catch (err) {

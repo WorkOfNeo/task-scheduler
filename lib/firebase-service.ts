@@ -368,30 +368,25 @@ export async function updateTask(id: string, data: Partial<Task>) {
     if (!docSnap.exists() || docSnap.data().userId !== userId) {
       throw new Error('Task not found or unauthorized');
     }
-
-    const oldData = docSnap.data() as Task;
-    const newData = { ...oldData, ...data };
-
-    // If task is being marked as done, calculate revenue and update client stats
-    if (data.status === 'done' && oldData.status !== 'done') {
-      const clientRef = doc(db, getUserClientsPath(userId), oldData.clientId);
+    
+    const taskData = docSnap.data();
+    const newData = {
+      ...data,
+      updatedAt: serverTimestamp()
+    };
+    
+    // If task is being marked as done, update client stats
+    if (data.status === 'done' && taskData.status !== 'done') {
+      const clientRef = doc(db, getUserClientsPath(userId), taskData.clientId);
       const clientDoc = await getDoc(clientRef);
       
       if (clientDoc.exists()) {
-        const clientData = clientDoc.data() as Client;
-        const hourlyRate = clientData.hourlyRate || 0;
-        const trackedHours = newData.trackedHours || 0;
-        const taskRevenue = hourlyRate * trackedHours;
-        
-        // Update task with revenue and completion date
-        newData.revenue = taskRevenue;
-        newData.completedAt = new Date().toISOString();
-        
-        // Update client stats
-        const now = new Date();
-        const isCurrentMonth = new Date(oldData.createdAt?.toDate()).getMonth() === now.getMonth();
+        const clientData = clientDoc.data();
+        const taskRevenue = taskData.trackedHours ? taskData.trackedHours * (clientData.hourlyRate || 0) : 0;
+        const isCurrentMonth = new Date().getMonth() === new Date(taskData.completedAt).getMonth();
         
         await updateDoc(clientRef, {
+          activeTasks: Math.max(0, (clientData.activeTasks || 0) - 1),
           completedTasks: (clientData.completedTasks || 0) + 1,
           totalRevenue: (clientData.totalRevenue || 0) + taskRevenue,
           monthlyRevenue: isCurrentMonth ? (clientData.monthlyRevenue || 0) + taskRevenue : clientData.monthlyRevenue || 0
@@ -400,7 +395,7 @@ export async function updateTask(id: string, data: Partial<Task>) {
     }
     
     await updateDoc(docRef, newData);
-    return { id, ...newData };
+    return { ...newData, id };
   } catch (error) {
     console.error('Error updating task:', error);
     throw error;

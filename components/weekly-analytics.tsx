@@ -4,27 +4,31 @@ import { useState, useEffect } from "react"
 import { Task, getTasks } from "@/lib/firebase-service"
 import { ChartContainer } from "@/components/ui/chart"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts"
+import { useAuthContext } from "@/lib/auth-context"
 
 export function WeeklyAnalytics() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuthContext()
 
   // Load tasks
   useEffect(() => {
-    async function loadTasks() {
+    async function loadData() {
+      if (!user) return
+      
       try {
         setLoading(true)
-        const tasksData = await getTasks()
+        const tasksData = await getTasks(user.uid)
         setTasks(tasksData)
       } catch (error) {
-        console.error("Error loading tasks:", error)
+        console.error("Error loading data:", error)
       } finally {
         setLoading(false)
       }
     }
-
-    loadTasks()
-  }, [])
+    
+    loadData()
+  }, [user])
 
   // Get the current date
   const today = new Date()
