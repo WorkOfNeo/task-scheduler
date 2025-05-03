@@ -15,7 +15,8 @@ import {
   QueryConstraint,
   getDoc,
   Timestamp,
-  setDoc
+  setDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
@@ -769,5 +770,86 @@ export async function getDashboardStats(userId: string) {
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
     throw error;
+  }
+}
+
+// Add temporary demo data
+export async function addTemporaryDemoData(userId: string, numberOfTasks: number = 5) {
+  try {
+    const tasksRef = collection(db, getUserTasksPath(userId));
+    const clientsRef = collection(db, getUserClientsPath(userId));
+
+    // First, get existing clients
+    const clientsSnapshot = await getDocs(clientsRef);
+    const clients = clientsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    if (clients.length === 0) {
+      throw new Error('No clients found. Please add clients first.');
+    }
+
+    // Generate demo tasks
+    const demoTasks = Array.from({ length: numberOfTasks }, (_, i) => {
+      const client = clients[Math.floor(Math.random() * clients.length)];
+      const status = ['todo', 'in-progress', 'done'][Math.floor(Math.random() * 3)] as 'todo' | 'in-progress' | 'done';
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + Math.floor(Math.random() * 30));
+
+      return {
+        userId,
+        clientId: client.id,
+        title: `Demo Task ${i + 1}`,
+        description: `This is a demo task ${i + 1} for testing purposes.`,
+        estimatedDuration: Math.floor(Math.random() * 180) + 30, // 30-210 minutes
+        dueDate: dueDate.toISOString(),
+        status,
+        createdAt: serverTimestamp()
+      };
+    });
+
+    // Add tasks to Firestore
+    const batch = writeBatch(db);
+    demoTasks.forEach(task => {
+      const docRef = doc(tasksRef);
+      batch.set(docRef, task);
+    });
+
+    await batch.commit();
+    return demoTasks;
+  } catch (error) {
+    console.error('Error adding demo data:', error);
+    throw error;
+  }
+}
+
+// Get schedule items for a specific date
+export async function getScheduleForDate(date: Date) {
+  try {
+    const userId = getCurrentUserId();
+    const scheduleRef = collection(db, getUserSchedulePath(userId));
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const q = query(
+      scheduleRef,
+      where('date', '==', dateStr),
+      orderBy('timeSlot', 'asc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const items: ScheduleItem[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      items.push({
+        id: doc.id,
+        ...doc.data()
+      } as ScheduleItem);
+    });
+    
+    return items;
+  } catch (error) {
+    console.error('Error getting schedule for date:', error);
+    return [];
   }
 } 
