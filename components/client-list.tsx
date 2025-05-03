@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit, Trash2, MoreHorizontal, Users } from "lucide-react"
@@ -9,41 +9,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditClientDialog } from "@/components/edit-client-dialog"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Client, getClients, deleteClient, updateClient } from "@/lib/firebase-service"
+import { Client } from "@/lib/firebase-service"
 import { useToast } from "@/components/ui/use-toast"
+import { useClients } from "@/lib/clients-context"
 
 export function ClientList() {
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
+  const { clients, loading, error, deleteClient: deleteClientFromContext, updateClient } = useClients()
   const [editClient, setEditClient] = useState<Client | null>(null)
   const [deleteClientState, setDeleteClientState] = useState<Client | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    async function loadClients() {
-      try {
-        setLoading(true)
-        const data = await getClients()
-        setClients(data)
-      } catch (error) {
-        console.error("Error loading clients:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load clients",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadClients()
-  }, [toast])
-
   const handleDeleteClient = async (client: Client) => {
     try {
-      await deleteClient(client.id)
-      setClients(clients.filter(c => c.id !== client.id))
+      await deleteClientFromContext(client.id)
       toast({
         title: "Success",
         description: `${client.name} has been deleted.`,
@@ -61,9 +39,6 @@ export function ClientList() {
   const handleUpdateClient = async (id: string, data: Partial<Client>) => {
     try {
       await updateClient(id, data)
-      setClients(clients.map((client) => 
-        client.id === id ? { ...client, ...data } : client
-      ))
       toast({
         title: "Success",
         description: "Client updated successfully",
@@ -102,6 +77,14 @@ export function ClientList() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">Error loading clients: {error.message}</p>
+      </div>
+    )
+  }
+
   if (clients.length === 0) {
     return (
       <EmptyState
@@ -122,56 +105,47 @@ export function ClientList() {
       {clients.map((client) => (
         <Link key={client.id} href={`/clients/${client.id}`} className="block group">
           <Card className="overflow-hidden transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{client.name}</CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setEditClient(client);
-                      }}
-                    >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setDeleteClientState(client);
-                      }}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <CardDescription>{client.email}</CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-sm">
-              <p className="text-muted-foreground">Active Tasks: {client.activeTasks}</p>
-              <p className="text-muted-foreground">Completed Tasks: {client.completedTasks}</p>
-            </div>
-          </CardContent>
-          <CardFooter>
-              <div className="w-full py-2 text-center text-sm font-medium text-primary group-hover:underline">
-                View Tasks
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{client.name}</CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditClient(client)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDeleteClientState(client)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-          </CardFooter>
-        </Card>
+              <CardDescription>{client.email}</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {client.phone || "No phone number"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {client.city && client.country ? `${client.city}, ${client.country}` : "No location"}
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <span>{client.activeTasks || 0} active tasks</span>
+                <span>•</span>
+                <span>{client.completedTasks || 0} completed</span>
+              </div>
+            </CardFooter>
+          </Card>
         </Link>
       ))}
 
