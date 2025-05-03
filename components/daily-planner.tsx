@@ -54,8 +54,7 @@ export function DailyPlanner() {
   async function loadSchedule() {
     setIsLoading(true)
     try {
-      const formattedDate = format(selectedDate, "yyyy-MM-dd")
-      const scheduleItems = await getScheduleForDate(formattedDate)
+      const scheduleItems = await getScheduleForDate(selectedDate)
       setTasks(scheduleItems)
     } catch (error) {
       console.error("Error loading schedule:", error)
@@ -99,7 +98,8 @@ export function DailyPlanner() {
         duration: 30, // Default to 30 minutes
         timeSlot: timeSlot as unknown as number, // Type conversion needed
         locked: false,
-        date: format(selectedDate, "yyyy-MM-dd")
+        date: format(selectedDate, "yyyy-MM-dd"),
+        userId: task.userId // Add the userId field
       }
 
       await addScheduleItem(scheduleItem)
@@ -109,7 +109,7 @@ export function DailyPlanner() {
     }
 
     setShowTaskSelector(false)
-    }
+  }
 
   async function handleLockToggle(taskId: string, locked: boolean) {
     try {
