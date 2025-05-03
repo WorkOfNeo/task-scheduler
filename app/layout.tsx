@@ -1,20 +1,26 @@
-import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import Header from "@/components/header"
-import Sidebar from "@/components/sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/components/providers"
 import { SPAProvider } from "@/lib/spa-provider"
+import { LayoutWrapper } from "@/components/layout-wrapper"
+import { AuthProvider } from '@/lib/auth-context'
+import { TasksProvider } from '@/lib/tasks-context'
+import { ClientsProvider } from '@/lib/clients-context'
+import { SettingsProvider } from '@/lib/settings-context'
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "TaskFlow - Personal Task Scheduler",
   description: "A personal task scheduler inspired by Motion",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
   manifest: "/manifest.json",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export const dynamic = 'force-dynamic';
@@ -35,17 +41,21 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            <SPAProvider>
-              <div className="flex h-full">
-            <Sidebar />
-                <div className="flex-1 flex flex-col">
-              <Header />
-                  <main className="flex-1 overflow-auto p-6">{children}</main>
-            </div>
-          </div>
-            </SPAProvider>
-          </Providers>
+          <AuthProvider>
+            <TasksProvider>
+              <ClientsProvider>
+                <SettingsProvider>
+                  <Providers>
+                    <SPAProvider>
+                      <LayoutWrapper>
+                        {children}
+                      </LayoutWrapper>
+                    </SPAProvider>
+                  </Providers>
+                </SettingsProvider>
+              </ClientsProvider>
+            </TasksProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -16,9 +16,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Task } from "@/lib/firebase-service"
+import { Task, Client } from "@/lib/firebase-service"
 import { Clock, CalendarClock } from "lucide-react"
 import { ScheduleTimeDialog } from "@/components/schedule-time-dialog"
+import { useClients } from "@/lib/clients-context"
 
 interface EditTaskDialogProps {
   task: Task;
@@ -33,9 +34,11 @@ export function EditTaskDialog({ task, open, onOpenChange, onUpdate }: EditTaskD
   const [status, setStatus] = useState<"todo" | "in-progress" | "done">(task.status as "todo" | "in-progress" | "done")
   const [dueDate, setDueDate] = useState(task.dueDate.split("T")[0])
   const [estimatedDuration, setEstimatedDuration] = useState(task.estimatedDuration.toString())
+  const [clientId, setClientId] = useState(task.clientId)
   const [loading, setLoading] = useState(false)
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const { toast } = useToast()
+  const { clients } = useClients()
 
   // Format date for display
   const formatScheduledDate = (dateStr?: string) => {
@@ -51,12 +54,13 @@ export function EditTaskDialog({ task, open, onOpenChange, onUpdate }: EditTaskD
       setStatus(task.status as "todo" | "in-progress" | "done")
       setDueDate(task.dueDate.split("T")[0])
       setEstimatedDuration(task.estimatedDuration.toString())
+      setClientId(task.clientId)
     }
   }, [task, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title || !description || !dueDate || !estimatedDuration) return
+    if (!title || !description || !dueDate || !estimatedDuration || !clientId) return
 
     setLoading(true)
     try {
@@ -71,6 +75,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onUpdate }: EditTaskD
         status,
         dueDate: `${dueDate}T00:00:00.000Z`,
         estimatedDuration: duration,
+        clientId
       }
 
       if (onUpdate) {
@@ -144,6 +149,24 @@ export function EditTaskDialog({ task, open, onOpenChange, onUpdate }: EditTaskD
                   placeholder="Enter task description"
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="client">Client</Label>
+                <Select 
+                  value={clientId} 
+                  onValueChange={setClientId}
+                >
+                  <SelectTrigger id="client">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>

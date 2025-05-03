@@ -6,19 +6,23 @@ import { Progress } from "@/components/ui/progress"
 import { Client, Task, getClients, getTasks } from "@/lib/firebase-service"
 import { Users } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useAuthContext } from "@/lib/auth-context"
 
 export function ClientSummary() {
   const [clients, setClients] = useState<Client[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuthContext()
 
   useEffect(() => {
     async function loadData() {
+      if (!user) return
+
       try {
         setLoading(true)
         const [clientsData, tasksData] = await Promise.all([
-          getClients(),
-          getTasks()
+          getClients(user.uid),
+          getTasks(user.uid)
         ])
         setClients(clientsData)
         setTasks(tasksData)
@@ -30,7 +34,7 @@ export function ClientSummary() {
     }
 
     loadData()
-  }, [])
+  }, [user])
 
   // Calculate tasks per client
   const clientTaskCounts = clients.map((client) => {

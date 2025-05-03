@@ -1,195 +1,311 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { DataTable, ColumnDef } from "@/components/ui/data-table"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2, EyeIcon } from "lucide-react"
-import Link from "next/link"
-import { EditClientDialog } from "@/components/edit-client-dialog"
-import { DeleteClientDialog } from "@/components/delete-client-dialog"
-import { Client, getClients, deleteClient, updateClient } from "@/lib/firebase-service"
-import { useToast } from "@/components/ui/use-toast"
+import { Edit, Trash2, Eye, MoreHorizontal, Building2, Mail, Phone, DollarSign, Calendar, Columns, GripVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Client } from "@/lib/firebase-service"
+import { useToast } from "@/components/ui/use-toast"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { format } from "date-fns"
+import { useClients } from "@/lib/clients-context"
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
+import { cn } from "@/lib/utils"
+import { CurrencyFormatter } from "@/components/currency-formatter"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
-export function ClientTable() {
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editClient, setEditClient] = useState<Client | null>(null)
-  const [deleteClientState, setDeleteClientState] = useState<Client | null>(null)
+interface ClientTableProps {
+  filter: "all" | "active" | "inactive"
+}
+
+export function ClientTable({ filter }: ClientTableProps) {
+  const { clients, loading, error, deleteClient } = useClients()
   const { toast } = useToast()
-
-  useEffect(() => {
-    async function loadClients() {
-      try {
-        setLoading(true)
-        const data = await getClients()
-        setClients(data)
-      } catch (error) {
-        console.error("Error loading clients:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load clients",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
+  const router = useRouter()
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    // Try to load from localStorage, fallback to default order
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('clientTableColumnOrder')
+      if (saved) {
+        try {
+          return JSON.parse(saved)
+        } catch (e) {
+          console.error('Failed to parse saved column order:', e)
+        }
       }
     }
+    return [
+      "name",
+      "email",
+      "phone",
+      "hourlyRate",
+      "monthlyWage",
+      "activeTasks",
+      "completedTasks",
+      "createdAt",
+      "actions"
+    ]
+  })
 
-    loadClients()
-  }, [toast])
+  // Save column order to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('clientTableColumnOrder', JSON.stringify(columnOrder))
+  }, [columnOrder])
 
-  const handleDeleteClient = async (client: Client) => {
-    try {
-      await deleteClient(client.id)
-      setClients(clients.filter((c) => c.id !== client.id))
-      toast({
-        title: "Success",
-        description: `${client.name} has been deleted`,
-      })
-    } catch (error) {
-      console.error("Error deleting client:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete client",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const handleUpdateClient = async (id: string, data: Partial<Client>) => {
-    try {
-      await updateClient(id, data)
-      setClients(clients.map((client) => 
-        client.id === id ? { ...client, ...data } : client
-      ))
-      toast({
-        title: "Success",
-        description: "Client updated successfully",
-      })
-    } catch (error) {
-      console.error("Error updating client:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update client",
-        variant: "destructive"
-      })
-    }
-  }
-  
-  // Define table columns
   const columns: ColumnDef<Client>[] = [
     {
       id: "name",
-      header: "Name",
+      header: "Client Name",
       accessorFn: (row) => row.name,
-      cell: ({ row }) => <span>{row.original.name}</span>,
-      enableSorting: true,
-      enableFiltering: true,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <button
+            onClick={() => router.push(`/clients/${client.id}`)}
+            className="flex items-center space-x-2 hover:underline text-left w-full"
+          >
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <span>{client.name}</span>
+          </button>
+        )
+      },
+      enableHiding: true
     },
     {
       id: "email",
       header: "Email",
       accessorFn: (row) => row.email,
-      cell: ({ row }) => <span>{row.original.email}</span>,
-      enableSorting: true,
-      enableFiltering: true,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <div className="flex items-center space-x-2">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <span>{client.email}</span>
+          </div>
+        )
+      },
+      enableHiding: true
+    },
+    {
+      id: "phone",
+      header: "Phone",
+      accessorFn: (row) => row.phone,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <div className="flex items-center space-x-2">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            <span>{client.phone || "N/A"}</span>
+          </div>
+        )
+      },
+      enableHiding: true
+    },
+    {
+      id: "hourlyRate",
+      header: "Hourly Rate",
+      accessorFn: (row) => row.hourlyRate,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <div className="flex items-center space-x-2">
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span>{client.hourlyRate ? <CurrencyFormatter amount={client.hourlyRate} /> + '/hr' : "N/A"}</span>
+          </div>
+        )
+      },
+      enableHiding: true
+    },
+    {
+      id: "monthlyWage",
+      header: "Monthly Wage",
+      accessorFn: (row) => row.monthlyWage,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <div className="flex items-center space-x-2">
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span>{client.monthlyWage ? <CurrencyFormatter amount={client.monthlyWage} /> + '/month' : "N/A"}</span>
+          </div>
+        )
+      },
+      enableHiding: true
     },
     {
       id: "activeTasks",
       header: "Active Tasks",
-      accessorFn: (row) => row.activeTasks || 0,
-      cell: ({ row }) => (
-        <Badge variant={row.original.activeTasks > 0 ? "default" : "outline"}>
-          {row.original.activeTasks || 0}
-        </Badge>
-      ),
-      enableSorting: true,
+      accessorFn: (row) => row.activeTasks,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
+            {client.activeTasks} active
+          </Badge>
+        )
+      },
+      enableHiding: true
     },
     {
       id: "completedTasks",
       header: "Completed Tasks",
-      accessorFn: (row) => row.completedTasks || 0,
-      cell: ({ row }) => (
-        <Badge variant="outline" className="bg-muted">
-          {row.original.completedTasks || 0}
-        </Badge>
-      ),
-      enableSorting: true,
+      accessorFn: (row) => row.completedTasks,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <Badge variant="outline" className="bg-green-500/10 text-green-500">
+            {client.completedTasks} completed
+          </Badge>
+        )
+      },
+      enableHiding: true
+    },
+    {
+      id: "createdAt",
+      header: "Created At",
+      accessorFn: (row) => row.createdAt,
+      cell: ({ row }) => {
+        const client = row.original
+        const date = client.createdAt ? new Date(client.createdAt) : null
+        const isValidDate = date instanceof Date && !isNaN(date.getTime())
+        
+        return (
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span>{isValidDate ? format(date, "MMM d, yyyy") : "N/A"}</span>
+          </div>
+        )
+      },
+      enableHiding: true
     },
     {
       id: "actions",
       header: "Actions",
-      accessorFn: (row) => row.id,
-      cell: ({ row }) => (
-        <div className="flex space-x-2">
-          <Link href={`/clients/${row.original.id}`}>
-            <Button variant="ghost" size="sm">
-              <EyeIcon className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setEditClient(row.original)}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDeleteClientState(row.original)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-      enableSorting: false,
-      enableFiltering: false,
-    },
+      accessorFn: () => null,
+      cell: ({ row }) => {
+        const client = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {}}>
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {}}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => deleteClient(client.id)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+    }
   ]
+
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return
+
+    const items = Array.from(columnOrder)
+    const [reorderedItem] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, reorderedItem)
+
+    setColumnOrder(items)
+  }
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-[250px]" />
-          <Skeleton className="h-10 w-[200px]" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-[500px] w-full" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[500px]">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Error loading clients</h3>
+          <p className="text-muted-foreground">{error.message}</p>
         </div>
-        <Skeleton className="h-[400px] w-full" />
       </div>
     )
   }
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={clients}
-        searchKey="name"
-        initialPageSize={10}
-        showFilters={false}
-      />
-
-      {editClient && (
-        <EditClientDialog 
-          client={editClient} 
-          open={!!editClient} 
-          onOpenChange={() => setEditClient(null)} 
-          onUpdate={handleUpdateClient}
-        />
-      )}
-
-      {deleteClientState && (
-        <DeleteClientDialog 
-          client={deleteClientState} 
-          open={!!deleteClientState} 
-          onOpenChange={() => setDeleteClientState(null)} 
-          onDelete={() => handleDeleteClient(deleteClientState)}
-        />
-      )}
-    </>
+    <DataTable
+      columns={columns}
+      data={clients}
+      searchKey="name"
+      columnOrder={columnOrder}
+      onColumnOrderChange={setColumnOrder}
+      columnVisibilityButton={
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="ml-auto">
+              <Columns className="mr-2 h-4 w-4" />
+              Columns
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[200px]">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="columns">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-1"
+                  >
+                    {columnOrder
+                      .filter(columnId => columns.find(col => col.id === columnId)?.enableHiding !== false)
+                      .map((columnId, index) => {
+                        const column = columns.find(col => col.id === columnId)
+                        if (!column) return null
+                        
+                        return (
+                          <Draggable
+                            key={columnId}
+                            draggableId={columnId}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={cn(
+                                  "flex items-center gap-2 px-2 py-1.5 rounded-md",
+                                  snapshot.isDragging 
+                                    ? "bg-accent text-accent-foreground" 
+                                    : "hover:bg-accent/50 cursor-pointer"
+                                )}
+                              >
+                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                <span className="flex-1">{column.header}</span>
+                              </div>
+                            )}
+                          </Draggable>
+                        )
+                      })}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    />
   )
 } 

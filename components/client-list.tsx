@@ -43,17 +43,17 @@ export function ClientList() {
   const handleDeleteClient = async (client: Client) => {
     try {
       await deleteClient(client.id)
-      setClients(clients.filter((c) => c.id !== client.id))
+      setClients(clients.filter(c => c.id !== client.id))
       toast({
         title: "Success",
-        description: `${client.name} has been deleted`,
+        description: `${client.name} has been deleted.`,
       })
     } catch (error) {
       console.error("Error deleting client:", error)
       toast({
         title: "Error",
-        description: "Failed to delete client",
-        variant: "destructive"
+        description: "Failed to delete client. Please try again.",
+        variant: "destructive",
       })
     }
   }
@@ -181,6 +181,7 @@ export function ClientList() {
           open={!!editClient} 
           onOpenChange={() => setEditClient(null)} 
           onUpdate={handleUpdateClient}
+          onDelete={() => handleDeleteClient(editClient)}
         />
       )}
 

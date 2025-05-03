@@ -7,20 +7,25 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recha
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Client, Task, getClients, getTasks } from "@/lib/firebase-service"
 import { DollarSign, Clock } from "lucide-react"
+import { CurrencyFormatter } from "@/components/currency-formatter"
+import { useAuthContext } from "@/lib/auth-context"
 
 export function ClientAnalytics() {
   const [clients, setClients] = useState<Client[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuthContext()
 
   // Load data
   useEffect(() => {
     async function loadData() {
+      if (!user) return
+
       try {
         setLoading(true)
         const [clientsData, tasksData] = await Promise.all([
-          getClients(),
-          getTasks()
+          getClients(user.uid),
+          getTasks(user.uid)
         ])
         setClients(clientsData)
         setTasks(tasksData)
@@ -32,7 +37,7 @@ export function ClientAnalytics() {
     }
 
     loadData()
-  }, [])
+  }, [user])
 
   // Calculate time spent per client based on completed tasks
   const clientAnalyticsData = clients
@@ -214,7 +219,7 @@ export function ClientAnalytics() {
                         fill="#8884d8"
                         dataKey="earnings"
                         nameKey="name"
-                        label={({ name, earnings }) => `${name}: $${earnings}`}
+                        label={({ name, earnings }) => `${name}: ${earnings}`}
                       >
                         {clientEarningsData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -222,7 +227,7 @@ export function ClientAnalytics() {
                       </Pie>
                       <Tooltip
                         formatter={(value: number) => {
-                          return [`$${value.toFixed(2)}`, "Earnings"]
+                          return [<CurrencyFormatter amount={value} />, "Earnings"]
                         }}
                       />
                       <Legend />
@@ -237,9 +242,15 @@ export function ClientAnalytics() {
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{client.name}</div>
                       <div className="text-sm">
-                        ${client.earnings.toFixed(2)}
-                        {client.hourlyRate ? ` (at $${client.hourlyRate}/hr)` : 
-                         client.monthlyWage ? ` (from $${client.monthlyWage}/month)` : ''}
+                        <CurrencyFormatter amount={client.earnings} />
+                        {client.hourlyRate ? ` (at ` : 
+                         client.monthlyWage ? ` (from ` : ''}
+                        {client.hourlyRate ? (
+                          <CurrencyFormatter amount={client.hourlyRate} /> + '/hr'
+                        ) : client.monthlyWage ? (
+                          <CurrencyFormatter amount={client.monthlyWage} /> + '/month'
+                        ) : ''}
+                        {client.hourlyRate || client.monthlyWage ? ')' : ''}
                       </div>
                     </div>
                     <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
@@ -247,13 +258,13 @@ export function ClientAnalytics() {
                         className="h-full rounded-full"
                         style={{
                           width: `${(client.earnings / clientEarningsData[0].earnings) * 100}%`,
-                  backgroundColor: COLORS[index % COLORS.length],
-                }}
-              />
-            </div>
-          </Card>
-        ))}
-      </div>
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </>
           ) : (
             <div className="flex items-center justify-center h-80 text-center">

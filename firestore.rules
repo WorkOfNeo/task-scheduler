@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
+      
+      // User's clients subcollection
+      match /clients/{clientId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // User's tasks subcollection
+      match /tasks/{taskId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+      
+      // User's schedule subcollection
+      match /schedule/{scheduleId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+    }
+  }
+} 

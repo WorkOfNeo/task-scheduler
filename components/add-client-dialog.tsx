@@ -47,23 +47,23 @@ export function AddClientDialog({ children, onClientAdded }: AddClientDialogProp
       
       // Only add optional fields if they have values
       if (phone) clientData.phone = phone
-      if (hourlyRate) clientData.hourlyRate = parseFloat(hourlyRate)
-      if (monthlyWage) clientData.monthlyWage = parseFloat(monthlyWage)
+      if (hourlyRate) clientData.hourlyRate = parseFloat(hourlyRate) || 0
+      if (monthlyWage) clientData.monthlyWage = parseFloat(monthlyWage) || 0
       
       await addClient(clientData)
       
-    toast({
-      title: "Client added",
-      description: `${name} has been added to your clients.`,
-    })
+      toast({
+        title: "Client added",
+        description: `${name} has been added to your clients.`,
+      })
 
-    // Reset form and close dialog
-    setName("")
-    setEmail("")
-    setPhone("")
+      // Reset form and close dialog
+      setName("")
+      setEmail("")
+      setPhone("")
       setHourlyRate("")
       setMonthlyWage("")
-    setOpen(false)
+      setOpen(false)
       
       // Call the callback if provided
       if (onClientAdded) {

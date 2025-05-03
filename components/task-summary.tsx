@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress"
 import { getTaskStats } from "@/lib/firebase-service"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ListTodo } from "lucide-react"
+import { useAuthContext } from "@/lib/auth-context"
 
 export function TaskSummary() {
   const [stats, setStats] = useState({
@@ -15,12 +16,15 @@ export function TaskSummary() {
     totalCount: 0,
   })
   const [loading, setLoading] = useState(true)
+  const { user } = useAuthContext()
 
   useEffect(() => {
     async function loadTaskStats() {
+      if (!user) return
+
       try {
         setLoading(true)
-        const data = await getTaskStats()
+        const data = await getTaskStats(user.uid)
         setStats(data)
       } catch (error) {
         console.error("Error loading task stats:", error)
@@ -30,7 +34,7 @@ export function TaskSummary() {
     }
 
     loadTaskStats()
-  }, [])
+  }, [user])
 
   // Calculate percentages
   const todoPercentage = stats.totalCount > 0 ? Math.round((stats.todoCount / stats.totalCount) * 100) : 0

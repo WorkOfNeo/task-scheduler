@@ -14,6 +14,7 @@ import { AddTaskDialog } from "@/components/add-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { TaskDetailDialog } from "@/components/task-detail-dialog"
+import { CurrencyFormatter } from "@/components/currency-formatter"
 
 interface ClientDetailDialogProps {
   client: Client;
@@ -122,11 +123,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
   const inProgressTasks = tasks.filter((task) => task.status === "in-progress")
   const doneTasks = tasks.filter((task) => task.status === "done")
   
-  const formatCurrency = (value?: number) => {
-    if (value == null) return 'Not set';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  };
-  
   return (
     <Dialog open={open && !viewTask && !editTask && !deleteTaskState} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -154,13 +150,13 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                   {client.hourlyRate && (
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span>Hourly Rate: {formatCurrency(client.hourlyRate)}</span>
+                      <span>Hourly Rate: <CurrencyFormatter amount={client.hourlyRate} /></span>
                     </div>
                   )}
                   {client.monthlyWage && (
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span>Monthly Wage: {formatCurrency(client.monthlyWage)}</span>
+                      <span>Monthly Wage: <CurrencyFormatter amount={client.monthlyWage} /></span>
                     </div>
                   )}
                 </div>

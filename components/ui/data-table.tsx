@@ -34,6 +34,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { CaretSortIcon } from "@radix-ui/react-icons"
+import { cn } from "@/lib/utils"
 
 type SortDirection = "asc" | "desc" | null
 
@@ -58,6 +59,9 @@ interface DataTableProps<T> {
   showFilters?: boolean
   initialSortColumn?: string
   initialSortDirection?: "asc" | "desc"
+  columnVisibilityButton?: React.ReactNode
+  columnOrder?: string[]
+  onColumnOrderChange?: (newOrder: string[]) => void
 }
 
 export function DataTable<T>({
@@ -69,24 +73,27 @@ export function DataTable<T>({
   showFilters = true,
   initialSortColumn,
   initialSortDirection,
+  columnVisibilityButton,
+  columnOrder,
+  onColumnOrderChange,
 }: DataTableProps<T>) {
   // Disable pagination, always show all results
   const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn || null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection || null)
   const [filters, setFilters] = useState<Record<string, string>>({})
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => 
     columns.reduce((acc, column) => {
       acc[column.id] = true
       return acc
     }, {} as Record<string, boolean>)
   )
   const [globalFilter, setGlobalFilter] = useState("")
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() =>
     columns.reduce((acc, column) => {
-      acc[column.id] = column.width ? Number(column.width) : 0;
+      acc[column.id] = column.width ? Number(column.width) : 100;
       return acc;
     }, {} as Record<string, number>)
-  );
+  )
   const [resizingColumn, setResizingColumn] = useState<string | null>(null);
   const [resizeStartX, setResizeStartX] = useState<number>(0);
   const [initialWidth, setInitialWidth] = useState<number>(0);
@@ -112,10 +119,16 @@ export function DataTable<T>({
     console.log('Initial column widths set:', initialWidths);
   }, [columns]);
 
-  // Get visible columns
-  const visibleColumns = useMemo(() => 
-    columns.filter(column => columnVisibility[column.id])
-  , [columns, columnVisibility]);
+  // Get visible columns in the correct order
+  const visibleColumns = useMemo(() => {
+    const orderedColumns = columnOrder 
+      ? columnOrder
+          .map(id => columns.find(col => col.id === id))
+          .filter((col): col is ColumnDef<T> => col !== undefined)
+      : columns;
+    
+    return orderedColumns.filter(column => columnVisibility[column.id]);
+  }, [columns, columnVisibility, columnOrder]);
 
   // Handle column visibility toggle
   const toggleColumnVisibility = (columnId: string, isVisible: boolean) => {
@@ -149,50 +162,53 @@ export function DataTable<T>({
   }
 
   // Apply filters and sorting to data
-  const filteredData = data.filter(row => {
-    // Apply column-specific filters
-    for (const columnId in filters) {
-      if (filters[columnId]) {
-        const column = columns.find(col => col.id === columnId)
+  const filteredAndSortedData = useMemo(() => {
+    // First apply filters
+    const filtered = data.filter(row => {
+      // Apply column-specific filters
+      for (const columnId in filters) {
+        if (filters[columnId]) {
+          const column = columns.find(col => col.id === columnId)
+          if (column) {
+            const value = String(column.accessorFn(row)).toLowerCase()
+            if (!value.includes(filters[columnId].toLowerCase())) {
+              return false
+            }
+          }
+        }
+      }
+
+      // Apply global search if searchKey is provided
+      if (searchKey && globalFilter) {
+        const column = columns.find(col => col.id === searchKey)
         if (column) {
           const value = String(column.accessorFn(row)).toLowerCase()
-          if (!value.includes(filters[columnId].toLowerCase())) {
+          if (!value.includes(globalFilter.toLowerCase())) {
             return false
           }
         }
       }
-    }
 
-    // Apply global search if searchKey is provided
-    if (searchKey && globalFilter) {
-      const column = columns.find(col => col.id === searchKey)
-      if (column) {
-        const value = String(column.accessorFn(row)).toLowerCase()
-        if (!value.includes(globalFilter.toLowerCase())) {
-          return false
-        }
-      }
-    }
+      return true
+    });
 
-    return true
-  })
+    // Then apply sorting
+    if (!sortColumn) return filtered;
 
-  // Apply sorting to filtered data
-  const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortColumn) return 0
-    
-    const column = columns.find(col => col.id === sortColumn)
-    if (!column) return 0
-    
-    const valueA = column.accessorFn(a)
-    const valueB = column.accessorFn(b)
-    
-    if (valueA === valueB) return 0
-    
-    // Default string comparison for simplicity
-    const comparison = String(valueA).localeCompare(String(valueB))
-    return sortDirection === "asc" ? comparison : -comparison
-  })
+    return [...filtered].sort((a, b) => {
+      const column = columns.find(col => col.id === sortColumn)
+      if (!column) return 0
+      
+      const valueA = column.accessorFn(a)
+      const valueB = column.accessorFn(b)
+      
+      if (valueA === valueB) return 0
+      
+      // Default string comparison for simplicity
+      const comparison = String(valueA).localeCompare(String(valueB))
+      return sortDirection === "asc" ? comparison : -comparison
+    });
+  }, [data, filters, globalFilter, searchKey, sortColumn, sortDirection, columns]);
 
   // Handle column resize with improved calculations
   const handleMouseDown = (columnId: string, e: React.MouseEvent) => {
@@ -271,13 +287,13 @@ export function DataTable<T>({
   };
 
   const table = useReactTable({
-    columns: columns.map(column => ({
+    columns: visibleColumns.map(column => ({
       ...column,
       accessorFn: column.accessorFn,
       cell: column.cell,
       header: column.header,
     })),
-    data: sortedData,
+    data: filteredAndSortedData,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -285,87 +301,60 @@ export function DataTable<T>({
   });
 
   return (
-    <div className="space-y-4 w-full">
-      {/* Column-specific filters - only show if showFilters is true */}
-      {showFilters && (
-        <div className="flex flex-wrap gap-2 py-2">
-          {columns
-            .filter(column => column.enableFiltering !== false)
-            .map(column => {
-              return (
-                <div key={column.id} className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    {column.header}:
-                  </span>
-                  <Input
-                    placeholder="Filter..."
-                    value={filters[column.id] || ""}
-                    onChange={(event) => handleFilterChange(column.id, event.target.value)}
-                    className="h-8 w-28 sm:w-40"
-                  />
-                </div>
-              )
-            })}
-        </div>
-      )}
-
-      {/* Table */}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        {showFilters && (
+          <div className="flex items-center gap-2">
+            {searchKey && (
+              <Input
+                placeholder="Search..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="max-w-sm"
+              />
+            )}
+          </div>
+        )}
+        {columnVisibilityButton}
+      </div>
       <div className="rounded-md border">
-        <Table className="table-fixed w-full">
+        <Table ref={tableRef}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      style={{
-                        width: header.getSize(),
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                      className="select-none"
-                    >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          {...{
-                            className: header.column.getCanSort()
-                              ? "flex items-center gap-1 cursor-pointer select-none"
-                              : "flex items-center gap-1",
-                            onClick: header.column.getToggleSortingHandler(),
-                          }}
-                        >
-                          <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                            {flexRender(
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    data-column-id={header.column.id}
+                    style={{ width: columnWidths[header.column.id] || 'auto' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={cn(
+                          "flex items-center gap-1",
+                          header.column.columnDef.enableSorting && "cursor-pointer select-none"
+                        )}
+                        onClick={() => header.column.columnDef.enableSorting && handleSort(header.column.id)}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                          </span>
-                          {header.column.getCanSort() && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="p-0 h-6 w-6 ml-1 flex-shrink-0"
-                            >
-                              <CaretSortIcon className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      {header.column.getCanResize() && (
+                        {header.column.columnDef.enableSorting && (
+                          <CaretSortIcon className="h-4 w-4" />
+                        )}
+                      </div>
+                      {header.column.columnDef.enableHiding !== false && (
                         <div
-                          onMouseDown={(e) => handleMouseDown(header.id, e)}
-                          className="absolute right-0 top-0 h-full w-1 bg-muted cursor-col-resize select-none touch-none hover:opacity-100"
-                          style={{
-                            opacity: resizingColumn === header.id ? 1 : 0,
-                          }}
-                        ></div>
+                          className="w-1 h-full cursor-col-resize hover:bg-primary/10"
+                          onMouseDown={(e) => handleMouseDown(header.column.id, e)}
+                        />
                       )}
-                    </TableHead>
-                  );
-                })}
+                    </div>
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -377,20 +366,11 @@ export function DataTable<T>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{
-                        width: cell.column.getSize(),
-                        overflow: "hidden",
-                      }}
-                      className="overflow-hidden whitespace-nowrap py-2"
-                    >
-                      <div className="w-full overflow-hidden text-ellipsis whitespace-nowrap">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </div>
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

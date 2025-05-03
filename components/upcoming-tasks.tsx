@@ -4,16 +4,20 @@ import { useState, useEffect } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { Clock } from "lucide-react"
 import { Task, getUpcomingTasks } from "@/lib/firebase-service"
+import { useAuthContext } from "@/lib/auth-context"
 
 export function UpcomingTasks() {
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuthContext()
 
   useEffect(() => {
     async function loadUpcomingTasks() {
+      if (!user) return
+
       try {
         setLoading(true)
-        const tasks = await getUpcomingTasks()
+        const tasks = await getUpcomingTasks(user.uid)
         setUpcomingTasks(tasks)
       } catch (error) {
         console.error("Error loading upcoming tasks:", error)
@@ -23,7 +27,7 @@ export function UpcomingTasks() {
     }
 
     loadUpcomingTasks()
-  }, [])
+  }, [user])
 
   const getStatusColor = (status: string) => {
     switch (status) {
