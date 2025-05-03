@@ -11,6 +11,7 @@ import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { TaskDetailDialog } from "@/components/task-detail-dialog"
 import { useSearchParams } from "next/navigation"
 import { Client, Task, getClients, getTasks } from "@/lib/firebase-service"
+import { useAuthContext } from "@/lib/auth-context"
 
 interface TasksViewProps {
   filter: "all" | "todo" | "in-progress" | "done"
@@ -24,6 +25,7 @@ export function TasksView({ filter }: TasksViewProps) {
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [deleteTask, setDeleteTask] = useState<Task | null>(null)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const { user } = useAuthContext()
 
   const searchParams = useSearchParams()
   const sortBy = searchParams.get("sortBy") || "due-date"
@@ -34,11 +36,13 @@ export function TasksView({ filter }: TasksViewProps) {
   // Load tasks and clients
   useEffect(() => {
     async function loadData() {
+      if (!user) return
+      
       try {
         setLoading(true)
         const [tasksData, clientsData] = await Promise.all([
-          getTasks(),
-          getClients()
+          getTasks(user.uid),
+          getClients(user.uid)
         ])
         setTasks(tasksData)
         setClients(clientsData)
@@ -50,7 +54,7 @@ export function TasksView({ filter }: TasksViewProps) {
     }
     
     loadData()
-  }, [])
+  }, [user])
 
   // Filter tasks based on the selected filter
   const filteredTasks = tasks.filter((task) => {
