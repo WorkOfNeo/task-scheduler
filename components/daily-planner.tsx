@@ -54,7 +54,9 @@ export function DailyPlanner() {
   async function loadSchedule() {
     setIsLoading(true)
     try {
-      const scheduleItems = await getScheduleForDate(selectedDate)
+      // Ensure selectedDate is a proper Date object
+      const date = new Date(selectedDate)
+      const scheduleItems = await getScheduleForDate(date)
       setTasks(scheduleItems)
     } catch (error) {
       console.error("Error loading schedule:", error)
