@@ -29,8 +29,8 @@ interface SettingsContextType {
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
   schedules: Schedule[];
   addSchedule: (schedule: Schedule) => void;
-  updateSchedule: (index: number, schedule: Schedule) => void;
-  removeSchedule: (index: number) => void;
+  updateSchedule: (id: string, schedule: Schedule) => void;
+  removeSchedule: (id: string) => void;
 }
 
 const defaultSettings: Settings = {
@@ -90,14 +90,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSchedules([...schedules, schedule])
   }
 
-  const updateSchedule = (index: number, schedule: Schedule) => {
-    const newSchedules = [...schedules]
-    newSchedules[index] = schedule
-    setSchedules(newSchedules)
+  const updateSchedule = (id: string, schedule: Schedule) => {
+    setSchedules(schedules.map(s => s.id === id ? schedule : s))
   }
 
-  const removeSchedule = (index: number) => {
-    setSchedules(schedules.filter((_, i) => i !== index))
+  const removeSchedule = (id: string) => {
+    setSchedules(schedules.filter(s => s.id !== id))
   }
 
   return (
