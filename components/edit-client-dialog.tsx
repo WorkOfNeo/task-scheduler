@@ -10,9 +10,10 @@ interface EditClientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate?: (id: string, data: Partial<Client>) => Promise<void>;
+  onDelete?: () => Promise<void>;
 }
 
-export function EditClientDialog({ client, open, onOpenChange, onUpdate }: EditClientDialogProps) {
+export function EditClientDialog({ client, open, onOpenChange, onUpdate, onDelete }: EditClientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
@@ -23,6 +24,7 @@ export function EditClientDialog({ client, open, onOpenChange, onUpdate }: EditC
         <ClientForm 
           client={client} 
           onSuccess={() => onOpenChange(false)}
+          onDelete={onDelete}
         />
       </DialogContent>
     </Dialog>

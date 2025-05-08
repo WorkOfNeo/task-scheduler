@@ -38,12 +38,14 @@ type ClientFormValues = z.infer<typeof clientFormSchema>
 interface ClientFormProps {
   client?: Client
   onSuccess?: () => void
+  onDelete?: () => Promise<void>
 }
 
-export function ClientForm({ client, onSuccess }: ClientFormProps) {
+export function ClientForm({ client, onSuccess, onDelete }: ClientFormProps) {
   const { addClient, updateClient } = useClients()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -100,6 +102,24 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!onDelete) return
+    
+    try {
+      setIsDeleting(true)
+      await onDelete()
+      onSuccess?.()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete client",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -300,10 +320,20 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : client ? "Update Client" : "Create Client"}
           </Button>
+          {client && onDelete && (
+            <Button 
+              type="button" 
+              variant="destructive" 
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Client"}
+            </Button>
+          )}
         </div>
       </form>
     </Form>
