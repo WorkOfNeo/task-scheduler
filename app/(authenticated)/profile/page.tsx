@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateUserProfile } from "@/lib/firebase-service"
+import { Toaster } from "@/components/ui/toaster"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -145,6 +146,8 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Toaster />
     </div>
   )
 } 

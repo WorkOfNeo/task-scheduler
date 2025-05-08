@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Edit, MoreHorizontal, Trash2, Clock, ChevronRight, ChevronDown, Eye } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { EditTaskDialog } from "@/components/edit-task-dialog"
+import { AddTaskDialog } from "@/components/add-task-dialog"
 import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { TaskDetailDialog } from "@/components/task-detail-dialog"
 import { useSearchParams } from "next/navigation"
@@ -331,7 +331,7 @@ export function TasksView({ filter }: TasksViewProps) {
       )}
 
       {editTask && (
-        <EditTaskDialog
+        <AddTaskDialog
           task={editTask}
           open={!!editTask}
           onOpenChange={(open) => !open && setEditTask(null)}

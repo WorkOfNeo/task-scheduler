@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { Clock } from "lucide-react"
 import { Task } from "@/lib/firebase-service"
@@ -8,20 +7,20 @@ import { Button } from "@/components/ui/button"
 import { useTasks } from "@/lib/tasks-context"
 import { toast } from 'react-toastify'
 
-interface UpcomingTasksProps {
+interface OverdueTasksProps {
   tasks: Task[]
   loading: boolean
 }
 
-export function UpcomingTasks({ tasks, loading }: UpcomingTasksProps) {
+export function OverdueTasks({ tasks, loading }: OverdueTasksProps) {
   const { updateTask } = useTasks()
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "todo":
-        return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
+        return "bg-red-500/10 text-red-500 hover:bg-red-500/20"
       case "in-progress":
-        return "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
+        return "bg-red-500/10 text-red-500 hover:bg-red-500/20"
       case "done":
         return "bg-green-500/10 text-green-500 hover:bg-green-500/20"
       default:
@@ -89,7 +88,7 @@ export function UpcomingTasks({ tasks, loading }: UpcomingTasksProps) {
   return (
     <div className="space-y-4">
       {tasks.length === 0 ? (
-        <div className="text-center text-muted-foreground py-4">No upcoming tasks found.</div>
+        <div className="text-center text-muted-foreground py-4">No overdue tasks found.</div>
       ) :
         tasks.map((task) => (
           <div 
@@ -98,9 +97,9 @@ export function UpcomingTasks({ tasks, loading }: UpcomingTasksProps) {
               task.status === 'done' ? 'opacity-50' : ''
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="font-medium">{task.title}</div>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between">
+              <div className="font-medium break-words">{task.title}</div>
+              <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline" className={getStatusColor(task.status)}>
                   {getStatusLabel(task.status)}
                 </Badge>
@@ -111,14 +110,14 @@ export function UpcomingTasks({ tasks, loading }: UpcomingTasksProps) {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between mt-2 text-xs text-muted-foreground">
               <div>Due: {formatDate(task.dueDate)}</div>
               <div className="flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
                 <span>{task.estimatedDuration} min</span>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground mt-1 break-words">
               <span className="font-medium">Time:</span> {task.startTime && task.endTime 
                 ? `${task.startTime} - ${task.endTime}`
                 : task.startTime 
@@ -132,4 +131,4 @@ export function UpcomingTasks({ tasks, loading }: UpcomingTasksProps) {
       }
     </div>
   )
-}
+} 

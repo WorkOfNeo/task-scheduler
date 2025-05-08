@@ -21,6 +21,7 @@ import { useClients } from "@/lib/clients-context"
 const clientFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
   address: z.string().optional(),
   zip: z.string().optional(),
   city: z.string().optional(),
@@ -49,6 +50,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
     defaultValues: {
       name: client?.name || "",
       email: client?.email || "",
+      phone: client?.phone || "",
       address: client?.address || "",
       zip: client?.zip || "",
       city: client?.city || "",
@@ -64,10 +66,26 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
   async function onSubmit(data: ClientFormValues) {
     try {
       setIsSubmitting(true)
+      
+      // Clean undefined values and ensure required fields
+      const cleanedData = {
+        name: data.name,
+        email: data.email,
+        ...Object.fromEntries(
+          Object.entries(data)
+            .filter(([key, value]) => 
+              key !== 'name' && 
+              key !== 'email' && 
+              value !== undefined && 
+              value !== ""
+            )
+        )
+      } as Omit<Client, "id" | "userId" | "activeTasks" | "completedTasks" | "createdAt">
+
       if (client) {
-        await updateClient(client.id, data)
+        await updateClient(client.id, cleanedData)
       } else {
-        await addClient(data)
+        await addClient(cleanedData)
       }
       toast({
         title: "Success",
@@ -113,6 +131,19 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                   <FormLabel>Email *</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="client@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Phone number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

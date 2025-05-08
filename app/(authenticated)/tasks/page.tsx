@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button"
 import { useAuthContext } from "@/lib/auth-context"
 import { addTemporaryDemoData } from "@/lib/firebase-service"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AddTaskDialog } from "@/components/add-task-dialog"
+import { useClients } from "@/lib/clients-context"
 
 // Add debug logging
 const debug = (message: string) => {
@@ -29,6 +31,7 @@ function TasksPageContent() {
   const [numberOfTasks, setNumberOfTasks] = useState(5)
   const { user } = useAuthContext()
   const { tasks } = useTasks()
+  const { clients } = useClients()
   const { toast } = useToast()
 
   // Filter tasks based on active tab
@@ -81,6 +84,19 @@ function TasksPageContent() {
           <p className="text-muted-foreground">View, sort, and group all your tasks</p>
         </div>
         <div className="flex items-center gap-4">
+          {clients.length > 0 ? (
+            <AddTaskDialog clientId={clients[0].id}>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Task
+              </Button>
+            </AddTaskDialog>
+          ) : (
+            <Button disabled variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
+          )}
           <div className="flex items-center gap-2">
             <Label htmlFor="taskCount">Number of tasks:</Label>
             <Input

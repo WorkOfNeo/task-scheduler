@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useTasks } from "@/lib/tasks-context"
+import { AddTaskDialog } from "@/components/add-task-dialog"
 
 interface TaskTableProps {
   tasks: Task[]
@@ -85,41 +86,6 @@ export function TaskTable({ tasks = [] }: TaskTableProps) {
           </div>
         )
       }
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      accessorFn: () => null,
-      cell: ({ row }) => {
-        const task = row.original
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewTask(task)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setEditTask(task)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setScheduleTask(task)}>
-                <AlarmClock className="mr-2 h-4 w-4" />
-                Schedule
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeleteTaskState(task)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      }
     }
   ]
 
@@ -174,6 +140,7 @@ export function TaskTable({ tasks = [] }: TaskTableProps) {
       <DataTable
         columns={columns}
         data={filteredTasks}
+        onRowClick={(task) => setViewTask(task)}
       />
 
       {viewTask && (
@@ -185,7 +152,7 @@ export function TaskTable({ tasks = [] }: TaskTableProps) {
       )}
 
       {editTask && (
-        <EditTaskDialog
+        <AddTaskDialog
           task={editTask}
           open={!!editTask}
           onOpenChange={(open) => !open && setEditTask(null)}

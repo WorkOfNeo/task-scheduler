@@ -105,30 +105,30 @@ export function ClientList() {
       {clients.map((client) => (
         <Link key={client.id} href={`/clients/${client.id}`} className="block group">
           <Card className="overflow-hidden transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{client.name}</CardTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">{client.name}</CardTitle>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditClient(client)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setDeleteClientState(client)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <CardDescription>{client.email}</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-2">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <CardDescription>{client.email}</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-2">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   {client.phone || "No phone number"}
@@ -136,16 +136,16 @@ export function ClientList() {
                 <p className="text-sm text-muted-foreground">
                   {client.city && client.country ? `${client.city}, ${client.country}` : "No location"}
                 </p>
-              </div>
-            </CardContent>
-            <CardFooter>
+            </div>
+          </CardContent>
+          <CardFooter>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <span>{client.activeTasks || 0} active tasks</span>
                 <span>•</span>
                 <span>{client.completedTasks || 0} completed</span>
               </div>
-            </CardFooter>
-          </Card>
+          </CardFooter>
+        </Card>
         </Link>
       ))}
 

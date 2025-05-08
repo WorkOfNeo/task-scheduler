@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
+import { getAuth } from 'firebase/auth';
 
 // Types based on mock data structure
 export interface Client {
@@ -61,6 +62,9 @@ export interface Task {
   revenue?: number; // Revenue generated from this task
   completedAt?: string; // ISO format date string (YYYY-MM-DD)
   createdAt?: any;
+  blockedBy?: string[];
+  schedules?: string[];
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface ScheduleItem {
@@ -87,12 +91,11 @@ export interface User {
 }
 
 // Helper function to get current user ID
-function getCurrentUserId() {
-  const user = auth.currentUser;
-  if (!user) {
-    throw new Error('User must be authenticated to perform this action');
-  }
-  return user.uid;
+export function getCurrentUserId(): string {
+  const auth = getAuth()
+  const user = auth.currentUser
+  if (!user) throw new Error("No user logged in")
+  return user.uid
 }
 
 // Helper function to get user's data path
@@ -209,15 +212,17 @@ export async function updateClient(id: string, data: Partial<Client>) {
 
 export async function deleteClient(clientId: string) {
   try {
+    const userId = getCurrentUserId();
+    
     // First, get all tasks associated with this client
     const tasks = await getClientTasks(clientId);
     
     // Delete all associated tasks
-    const deleteTaskPromises = tasks.map(task => deleteDoc(doc(db, "tasks", task.id)));
+    const deleteTaskPromises = tasks.map(task => deleteDoc(doc(db, getUserTasksPath(userId), task.id)));
     await Promise.all(deleteTaskPromises);
     
     // Finally, delete the client
-    await deleteDoc(doc(db, "clients", clientId));
+    await deleteDoc(doc(db, getUserClientsPath(userId), clientId));
   } catch (error) {
     console.error("Error deleting client:", error);
     throw error;
@@ -281,6 +286,7 @@ export async function getUpcomingTasks(userId: string) {
     const snapshot = await getDocs(q)
     return snapshot.docs.map(doc => ({
       id: doc.id,
+      userId: userId,
       ...doc.data()
     } as Task))
   } catch (error) {
@@ -365,8 +371,8 @@ export async function updateTask(id: string, data: Partial<Task>) {
     const docRef = doc(db, getUserTasksPath(userId), id);
     const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists() || docSnap.data().userId !== userId) {
-      throw new Error('Task not found or unauthorized');
+    if (!docSnap.exists()) {
+      throw new Error('Task not found');
     }
     
     const taskData = docSnap.data();
@@ -405,10 +411,10 @@ export async function updateTask(id: string, data: Partial<Task>) {
 export async function deleteTask(id: string) {
   try {
     const userId = getCurrentUserId();
-    const docRef = doc(db, 'tasks', id);
+    const docRef = doc(db, getUserTasksPath(userId), id);
     const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists() || docSnap.data().userId !== userId) {
+    if (!docSnap.exists()) {
       throw new Error('Task not found or unauthorized');
     }
     
@@ -417,10 +423,10 @@ export async function deleteTask(id: string) {
     
     // Update client's active task count
     if (taskData.clientId) {
-      const clientRef = doc(db, 'clients', taskData.clientId);
+      const clientRef = doc(db, getUserClientsPath(userId), taskData.clientId);
       const clientDoc = await getDoc(clientRef);
       
-      if (clientDoc.exists() && clientDoc.data().userId === userId) {
+      if (clientDoc.exists()) {
         const clientData = clientDoc.data();
         await updateDoc(clientRef, {
           activeTasks: Math.max(0, (clientData.activeTasks || 0) - 1)
@@ -760,7 +766,9 @@ export async function getDashboardStats(userId: string) {
       },
       completedThisMonth: completedThisMonth.length,
       hoursThisMonth: completedThisMonth.reduce((total, task) => total + (task.trackedHours || 0), 0),
-      revenueThisMonth
+      revenueThisMonth,
+      taskRevenue,
+      monthlyWages
     };
   } catch (error) {
     console.error('Error getting dashboard stats:', error);
@@ -846,5 +854,29 @@ export async function getScheduleForDate(date: Date) {
   } catch (error) {
     console.error('Error getting schedule for date:', error);
     return [];
+  }
+}
+
+export async function getOverdueTasks(userId: string) {
+  try {
+    const tasksRef = collection(db, getUserTasksPath(userId))
+    const now = new Date()
+    
+    const q = query(
+      tasksRef,
+      where('dueDate', '<', now.toISOString()),
+      where('status', 'in', ['todo', 'in-progress']),
+      orderBy('dueDate', 'asc')
+    )
+    
+    const snapshot = await getDocs(q)
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      userId: userId,
+      ...doc.data()
+    } as Task))
+  } catch (error) {
+    console.error('Error getting overdue tasks:', error)
+    throw error
   }
 } 

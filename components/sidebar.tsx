@@ -23,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SettingsSection } from "@/components/settings-section"
 
 const routes = [
   {
@@ -50,6 +49,11 @@ const routes = [
     label: "Analytics",
     icon: BarChart,
     href: "/analytics",
+  },
+  {
+    label: "Settings",
+    icon: Settings2,
+    href: "/settings",
   },
 ]
 
@@ -88,7 +92,6 @@ export function Sidebar() {
         </div>
 
         <div className="mt-auto">
-          <SettingsSection />
           <div className="p-4 border-t">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

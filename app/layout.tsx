@@ -9,6 +9,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { TasksProvider } from '@/lib/tasks-context'
 import { ClientsProvider } from '@/lib/clients-context'
 import { SettingsProvider } from '@/lib/settings-context'
+import { TaskProvider } from '@/lib/task-context'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -45,13 +46,15 @@ export default function RootLayout({
             <TasksProvider>
               <ClientsProvider>
                 <SettingsProvider>
-                  <Providers>
-                    <SPAProvider>
-                      <LayoutWrapper>
-                        {children}
-                      </LayoutWrapper>
-                    </SPAProvider>
-                  </Providers>
+                  <TaskProvider>
+                    <Providers>
+                      <SPAProvider>
+                        <LayoutWrapper>
+                          {children}
+                        </LayoutWrapper>
+                      </SPAProvider>
+                    </Providers>
+                  </TaskProvider>
                 </SettingsProvider>
               </ClientsProvider>
             </TasksProvider>

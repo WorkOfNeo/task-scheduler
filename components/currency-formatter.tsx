@@ -4,31 +4,16 @@ import { useSettings } from "@/lib/settings-context"
 
 interface CurrencyFormatterProps {
   amount: number
-  className?: string
+  currency?: string
 }
 
-export function CurrencyFormatter({ amount, className }: CurrencyFormatterProps) {
+export function CurrencyFormatter({ amount, currency }: CurrencyFormatterProps) {
   const { settings } = useSettings()
-  const { currency } = settings
+  const defaultCurrency = settings.currency?.code || "EUR"
+  const displayCurrency = currency || defaultCurrency
 
-  const formattedAmount = new Intl.NumberFormat('da-DK', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-  return (
-    <span className={className}>
-      {currency.position === 'before' ? (
-        <>
-          {currency.symbol}
-          {formattedAmount}
-        </>
-      ) : (
-        <>
-          {formattedAmount}
-          {currency.symbol}
-        </>
-      )}
-    </span>
-  )
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: displayCurrency,
+  }).format(amount);
 } 

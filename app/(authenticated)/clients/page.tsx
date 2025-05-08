@@ -2,126 +2,73 @@
 
 import { useState } from "react"
 import { useClients } from "@/lib/clients-context"
-import { Client } from "@/lib/firebase-service"
 import { Button } from "@/components/ui/button"
-import { ClientForm } from "@/components/client-form"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Pencil, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Plus, Search } from "lucide-react"
+import { AddClientDialog } from "@/components/add-client-dialog"
+import { Client } from "@/lib/firebase-service"
+import { useRouter } from "next/navigation"
 
 export default function ClientsPage() {
   const { clients, loading, error } = useClients()
-  const [selectedClient, setSelectedClient] = useState<Client | undefined>()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const router = useRouter()
 
-  const handleEdit = (client: Client) => {
-    setSelectedClient(client)
-    setIsDialogOpen(true)
-  }
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
-  const handleAdd = () => {
-    setSelectedClient(undefined)
-    setIsDialogOpen(true)
-  }
-
-  const handleSuccess = () => {
-    setIsDialogOpen(false)
-    setSelectedClient(undefined)
-  }
-
-  if (loading) {
-    return <div>Loading clients...</div>
-  }
-
-  if (error) {
-    return <div>Error loading clients: {error.message}</div>
-  }
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Clients</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedClient ? "Edit Client" : "Add New Client"}
-              </DialogTitle>
-            </DialogHeader>
-            <ClientForm client={selectedClient} onSuccess={handleSuccess} />
-          </DialogContent>
-        </Dialog>
+        <AddClientDialog>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Client
+          </Button>
+        </AddClientDialog>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>City</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>VAT</TableHead>
-              <TableHead>Currency</TableHead>
-              <TableHead>Hourly Rate</TableHead>
-              <TableHead>Monthly Wage</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clients.map((client) => (
-              <TableRow key={client.id}>
-                <TableCell className="font-medium">{client.name}</TableCell>
-                <TableCell>{client.email}</TableCell>
-                <TableCell>{client.city}</TableCell>
-                <TableCell>{client.country}</TableCell>
-                <TableCell>{client.vat}</TableCell>
-                <TableCell>{client.currency}</TableCell>
-                <TableCell>
-                  {client.hourlyRate ? `${client.hourlyRate} ${client.currency}` : "-"}
-                </TableCell>
-                <TableCell>
-                  {client.monthlyWage ? `${client.monthlyWage} ${client.currency}` : "-"}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(client)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Input
+          placeholder="Search clients..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      <div className="border rounded-lg">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-4 font-medium">Name</th>
+              <th className="text-left p-4 font-medium">Email</th>
+              <th className="text-left p-4 font-medium">Phone</th>
+              <th className="text-left p-4 font-medium">Active Tasks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredClients.map((client) => (
+              <tr 
+                key={client.id} 
+                className="border-b hover:bg-muted/50 cursor-pointer"
+                onClick={() => router.push(`/clients/${client.id}`)}
+              >
+                <td className="p-4">{client.name}</td>
+                <td className="p-4">{client.email}</td>
+                <td className="p-4">{client.phone || "-"}</td>
+                <td className="p-4">{client.activeTasks || 0}</td>
+              </tr>
             ))}
-            {clients.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-4">
-                  No clients found. Add your first client to get started.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   )

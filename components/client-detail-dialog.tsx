@@ -11,7 +11,6 @@ import { Client, Task, getClientTasks, deleteTask, updateTask } from "@/lib/fire
 import { useToast } from "@/components/ui/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { AddTaskDialog } from "@/components/add-task-dialog"
-import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { TaskDetailDialog } from "@/components/task-detail-dialog"
 import { CurrencyFormatter } from "@/components/currency-formatter"
@@ -20,13 +19,13 @@ interface ClientDetailDialogProps {
   client: Client;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete: () => void;
 }
 
-export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailDialogProps) {
+export function ClientDetailDialog({ client, open, onOpenChange, onDelete }: ClientDetailDialogProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [viewTask, setViewTask] = useState<Task | null>(null)
-  const [editTask, setEditTask] = useState<Task | null>(null)
   const [deleteTaskState, setDeleteTaskState] = useState<Task | null>(null)
   const { toast } = useToast()
   
@@ -124,11 +123,23 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
   const doneTasks = tasks.filter((task) => task.status === "done")
   
   return (
-    <Dialog open={open && !viewTask && !editTask && !deleteTaskState} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{client.name}</DialogTitle>
-          <DialogDescription>Client details and tasks</DialogDescription>
+    <Dialog open={open && !viewTask && !deleteTaskState} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[90vw] max-h-[90vh] w-[800px] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl">{client.name}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <DialogDescription>Client details and information</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6">
@@ -230,7 +241,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                         key={task.id}
                         task={task}
                         onView={() => setViewTask(task)}
-                        onEdit={() => setEditTask(task)}
                         onDelete={() => setDeleteTaskState(task)}
                         getStatusColor={getStatusColor}
                         getStatusLabel={getStatusLabel}
@@ -267,7 +277,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                         key={task.id}
                         task={task}
                         onView={() => setViewTask(task)}
-                        onEdit={() => setEditTask(task)}
                         onDelete={() => setDeleteTaskState(task)}
                         getStatusColor={getStatusColor}
                         getStatusLabel={getStatusLabel}
@@ -304,7 +313,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                         key={task.id}
                         task={task}
                         onView={() => setViewTask(task)}
-                        onEdit={() => setEditTask(task)}
                         onDelete={() => setDeleteTaskState(task)}
                         getStatusColor={getStatusColor}
                         getStatusLabel={getStatusLabel}
@@ -341,7 +349,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
                         key={task.id}
                         task={task}
                         onView={() => setViewTask(task)}
-                        onEdit={() => setEditTask(task)}
                         onDelete={() => setDeleteTaskState(task)}
                         getStatusColor={getStatusColor}
                         getStatusLabel={getStatusLabel}
@@ -364,22 +371,6 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
         />
       )}
       
-      {/* Edit Task Dialog */}
-      {editTask && (
-        <EditTaskDialog
-          task={editTask}
-          open={!!editTask}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditTask(null);
-              // Reload tasks to reflect any changes
-              loadTasks();
-            }
-          }}
-          onUpdate={handleUpdateTask}
-        />
-      )}
-      
       {/* Delete Task Dialog */}
       {deleteTaskState && (
         <DeleteTaskDialog
@@ -397,14 +388,12 @@ export function ClientDetailDialog({ client, open, onOpenChange }: ClientDetailD
 function TaskCard({ 
   task, 
   onView, 
-  onEdit, 
   onDelete, 
   getStatusColor, 
   getStatusLabel 
 }: { 
   task: Task; 
   onView: () => void; 
-  onEdit: () => void; 
   onDelete: () => void; 
   getStatusColor: (status: string) => string; 
   getStatusLabel: (status: string) => string; 
@@ -434,10 +423,6 @@ function TaskCard({
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(); }}>
                     <Eye className="mr-2 h-4 w-4" />
                     View Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />

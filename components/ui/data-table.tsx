@@ -62,6 +62,7 @@ interface DataTableProps<T> {
   columnVisibilityButton?: React.ReactNode
   columnOrder?: string[]
   onColumnOrderChange?: (newOrder: string[]) => void
+  onRowClick?: (row: T) => void
 }
 
 export function DataTable<T>({
@@ -76,6 +77,7 @@ export function DataTable<T>({
   columnVisibilityButton,
   columnOrder,
   onColumnOrderChange,
+  onRowClick,
 }: DataTableProps<T>) {
   // Disable pagination, always show all results
   const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn || null)
@@ -363,7 +365,8 @@ export function DataTable<T>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  className={cn(onRowClick && 'cursor-pointer hover:bg-accent/40 transition-colors')}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

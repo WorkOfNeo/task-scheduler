@@ -111,7 +111,7 @@ export function DailyPlanner() {
     }
 
     setShowTaskSelector(false)
-  }
+    }
 
   async function handleLockToggle(taskId: string, locked: boolean) {
     try {

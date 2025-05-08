@@ -26,7 +26,7 @@ export function WeeklyAnalytics() {
         setLoading(false)
       }
     }
-    
+
     loadData()
   }, [user])
 

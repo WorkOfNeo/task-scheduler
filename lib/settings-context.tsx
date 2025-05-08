@@ -1,9 +1,10 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useAuthContext } from './auth-context'
 import { db } from './firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { getCurrentUserId } from "@/lib/firebase-service"
 
 interface CurrencySettings {
   code: string;
@@ -11,59 +12,103 @@ interface CurrencySettings {
   position: 'before' | 'after';
 }
 
+interface Schedule {
+  id: string;
+  days: string[];
+  from: string;
+  to: string;
+}
+
 interface Settings {
   currency: CurrencySettings;
+  schedules?: Schedule[];
 }
 
 interface SettingsContextType {
   settings: Settings;
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
+  schedules: Schedule[];
+  addSchedule: (schedule: Schedule) => void;
+  updateSchedule: (index: number, schedule: Schedule) => void;
+  removeSchedule: (index: number) => void;
 }
 
 const defaultSettings: Settings = {
   currency: {
-    code: 'DKK',
-    symbol: 'kr',
-    position: 'after'
-  }
+    code: 'EUR',
+    symbol: '€',
+    position: 'before'
+  },
+  schedules: []
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
+export function SettingsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext()
   const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [schedules, setSchedules] = useState<Schedule[]>([])
 
   useEffect(() => {
-    async function loadSettings() {
-      if (!user) return
-
-      const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences')
-      const settingsDoc = await getDoc(settingsRef)
-
-      if (settingsDoc.exists()) {
-        setSettings(settingsDoc.data() as Settings)
-      } else {
-        // Initialize settings if they don't exist
-        await setDoc(settingsRef, defaultSettings)
-      }
+    if (user) {
+      loadSettings()
     }
-
-    loadSettings()
   }, [user])
 
-  const updateSettings = async (newSettings: Partial<Settings>) => {
-    if (!user) return
+  const loadSettings = async () => {
+    try {
+      const userId = getCurrentUserId()
+      const settingsRef = doc(db, 'users', userId, 'settings', 'general')
+      const settingsDoc = await getDoc(settingsRef)
+      
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data()
+        setSettings({
+          ...defaultSettings,
+          ...data
+        })
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error)
+    }
+  }
 
-    const updatedSettings = { ...settings, ...newSettings }
-    const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences')
-    
-    await setDoc(settingsRef, updatedSettings, { merge: true })
-    setSettings(updatedSettings)
+  const updateSettings = async (newSettings: Partial<Settings>) => {
+    try {
+      const userId = getCurrentUserId()
+      const settingsRef = doc(db, 'users', userId, 'settings', 'general')
+      const updatedSettings = { ...settings, ...newSettings }
+      await setDoc(settingsRef, updatedSettings)
+      setSettings(updatedSettings)
+    } catch (error) {
+      console.error("Error updating settings:", error)
+      throw error
+    }
+  }
+
+  const addSchedule = (schedule: Schedule) => {
+    setSchedules([...schedules, schedule])
+  }
+
+  const updateSchedule = (index: number, schedule: Schedule) => {
+    const newSchedules = [...schedules]
+    newSchedules[index] = schedule
+    setSchedules(newSchedules)
+  }
+
+  const removeSchedule = (index: number) => {
+    setSchedules(schedules.filter((_, i) => i !== index))
   }
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
+    <SettingsContext.Provider value={{
+      settings,
+      updateSettings,
+      schedules,
+      addSchedule,
+      updateSchedule,
+      removeSchedule
+    }}>
       {children}
     </SettingsContext.Provider>
   )
