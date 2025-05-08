@@ -12,6 +12,9 @@ import { TaskDetailDialog } from "@/components/task-detail-dialog"
 import { useSearchParams } from "next/navigation"
 import { Client, Task, getClients, getTasks } from "@/lib/firebase-service"
 import { useAuthContext } from "@/lib/auth-context"
+import { useTasks } from "@/lib/tasks-context"
+import { useClients } from "@/lib/clients-context"
+import { useToast } from "@/components/ui/use-toast"
 
 interface TasksViewProps {
   filter: "all" | "todo" | "in-progress" | "done"
@@ -26,6 +29,9 @@ export function TasksView({ filter }: TasksViewProps) {
   const [deleteTask, setDeleteTask] = useState<Task | null>(null)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const { user } = useAuthContext()
+  const { tasks: contextTasks, loading: contextLoading, deleteTask: deleteTaskAction } = useTasks()
+  const { clients: contextClients } = useClients()
+  const { toast } = useToast()
 
   const searchParams = useSearchParams()
   const sortBy = searchParams.get("sortBy") || "due-date"
@@ -193,6 +199,26 @@ export function TasksView({ filter }: TasksViewProps) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
   }
 
+  const handleDeleteTask = async () => {
+    if (!deleteTask) return
+
+    try {
+      await deleteTaskAction(deleteTask.id)
+      toast({
+        title: "Task deleted",
+        description: `${deleteTask.title} has been deleted successfully.`,
+      })
+      setDeleteTask(null)
+    } catch (error) {
+      console.error("Error deleting task:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -343,6 +369,7 @@ export function TasksView({ filter }: TasksViewProps) {
           task={deleteTask}
           open={!!deleteTask}
           onOpenChange={(open) => !open && setDeleteTask(null)}
+          onDelete={handleDeleteTask}
         />
       )}
     </div>
